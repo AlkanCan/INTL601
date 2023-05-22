@@ -1,0 +1,85 @@
+---
+title: "QRM"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+date: "2023-05-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## DESCRIPTIVE STATISTICS
+
+```{r}
+library(tinytex)
+df <- read.csv('C:/Users/Alkan/QRMDATA2.csv')
+df = subset(df, select = -c(X,Country.Code) )
+str(df)
+summary(df)
+hist(df$Incidents,col="skyblue3",breaks=20)
+mean(df$Incidents)
+var(df$Incidents)
+#The dependent variable is event count, so we can use either poisson distribution or negative binomial. 
+#The mean and variance is not equal to each other-variance is much bigger than mean 
+#Distribution of the variable is right skewed as can be understood from histogram. 
+#Therefore, negative binomial will be preferred rather than poisson distribution
+```
+
+## GLM NEGATIVE BINOMIAL
+```{r dummy}
+library(fastDummies)
+library(MASS)
+library(lme4)
+df1=dummy_columns(df,remove_first_dummy = TRUE,select_columns = c("Religion","Region"))
+#added dummy variables for categorical values
+mod1=glm.nb(Incidents~polity2+GDP+Region+Religion+Population,data=df1)
+summary(mod1)
+```
+## NULL MODEL
+```{r null} 
+mod1null=glm.nb(Incidents~GDP+Region+Population,data=df1)
+summary(mod1null)
+```
+## COMPARISON WITH ANOVA
+```{r anova}
+anova(mod1,mod1null,test='Chisq')
+#Comparison with the null model using Chi Square test shows that 
+#The explanatory variable highly significant (very small p value), 
+#Therefore the complex model is selected
+```
+
+## One Way Fixed Effect (country)
+```{r fixedeffect (country)}
+
+library(lme4)
+mod2=glm.nb(Incidents~polity2+GDP+Region+Religion+Population+as.factor(country),data=df1)
+summary(mod2)
+```
+
+## One way fixed effect (year)
+```{r fixedeffect (year)}
+mod3=glm.nb(Incidents~polity2+GDP+Region+Religion+Population+as.factor(year),data=df1)
+summary(mod3)
+```
+## Two way fixed effect
+```{r twoway}
+
+mod4=glm.nb(Incidents~polity2+GDP+Region+Religion+Population+as.factor(year)+as.factor(country),data=df1)
+summary(mod4)
+
+
+```
+## RANDOM EFFECT
+```{r random effect}
+#glmer.nb(Incidents~polity2+GDP+Region+Religion+Population+(1|country), data=df1)
+#summary(mod5)
+#The aim was to implement a random mixed effect model 
+#Compare it with fixed effect models using Hausman Test
+#To decide whether random effect should be preferred or not. 
+#However, it kept giving me error of rescaling a variable which I could not handle.
+```
+
